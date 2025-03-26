@@ -5,7 +5,7 @@ from .models import *
 from .serializers import ProductSerializer
 from .filters import ProductsFilter
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticated 
+from rest_framework.permissions import IsAuthenticated ,IsAdminUser
 from rest_framework import status
 from django.db.models import Avg
 # Create your views here.
@@ -36,7 +36,7 @@ def get_by_id_product(request , g_id):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsAdminUser])
 def new_product(request):
     data = request.data 
     serializer = ProductSerializer(data=data)
@@ -58,7 +58,7 @@ def new_product(request):
     
     
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])    
+@permission_classes([IsAuthenticated,IsAdminUser])    
 def product_update(request , id):
     product = get_object_or_404(Products,id=id)
      
@@ -80,7 +80,7 @@ def product_update(request , id):
     
     
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])    
+@permission_classes([IsAuthenticated,IsAdminUser])    
 def product_delete(request , id):
     product = get_object_or_404(Products,id=id)
      
