@@ -52,7 +52,7 @@ Tech Stack
 
 Backend: Django, Django REST Framework
 
-Database: PostgreSQL / MySQL
+Database: MySQL
 
 Authentication: JWT (Django Simple JWT)
 
