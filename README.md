@@ -58,4 +58,3 @@ Authentication: JWT (Django Simple JWT)
 
 Email Service: Mailtrap (for password reset emails)
 
-Deployment: Docker, Gunicorn, Nginx
