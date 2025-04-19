@@ -77,8 +77,8 @@ def forget_password(request):
     user.profile.reset_password_token = token
     user.profile.reset_password_expire = expire_date
     user.profile.save()
-    host=get_curent_host(request)
-    link = "http://127.0.0.1:8000/api/reset_password/{token}".format(token=token)
+    host = get_curent_host(request)
+    link = f"{host}api/reset_password/{token}"
     body = "Your password reset link is :{link}".format(link=link)
     send_mail(
         "password reset from Emarket",
