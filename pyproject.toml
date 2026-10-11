@@ -1,0 +1,36 @@
+[project]
+name = "ecommerce-api"
+version = "1.0.0"
+description = "A Django REST Framework e-commerce backend MVP."
+requires-python = ">=3.10"
+dependencies = [
+    "Django>=5.2.18,<5.3",
+    "djangorestframework>=3.16.1,<3.17",
+    "djangorestframework-simplejwt>=5.3,<6.0",
+    "django-filter>=23.5,<26.0",
+    "drf-spectacular>=0.27,<1.0",
+    "python-dotenv>=1.0,<2.0",
+]
+
+[project.optional-dependencies]
+mysql = ["mysqlclient>=2.2,<3.0"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0,<10.0",
+    "pytest-django>=4.8,<5.0",
+    "ruff>=0.6,<1.0",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "emarket.settings"
+python_files = ["test_*.py", "*_tests.py", "tests.py"]
+addopts = "-ra -p no:cacheprovider"
+
+[tool.ruff]
+line-length = 160
+target-version = "py310"
+exclude = ["migrations", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "DJ"]

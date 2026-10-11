@@ -1,0 +1,46 @@
+name: Django CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ecommerce
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      DJANGO_SETTINGS_MODULE: emarket.settings
+      DJANGO_SECRET_KEY: ci-only-test-secret-that-is-not-used-outside-github-actions
+      DJANGO_DEBUG: 'true'
+      DB_ENGINE: django.db.backends.mysql
+      DB_NAME: ecommerce
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -r requirements-dev.txt -r requirements-mysql.txt
+      - run: python manage.py check
+      - run: python manage.py makemigrations --check --dry-run
+      - run: python -c "import django; django.setup(); from django.db import connection; connection.ensure_connection(); assert connection.vendor == 'mysql'; cursor = connection.cursor(); cursor.execute('SELECT VERSION()'); version = cursor.fetchone()[0]; assert version.startswith('8.4.'), version; print('Connected to MySQL 8.4')"
+      - run: python -m pytest -vv
+      - run: ruff check . --select F821
+      - run: ruff check account/models.py account/serializers.py account/tests.py account/urls.py account/views.py emarket/settings.py emarket/urls.py order/models.py order/serializers.py order/services.py order/tests.py order/urls.py order/views.py product/filters.py product/models.py product/serializers.py product/tests.py product/urls.py product/views.py
+      - run: ruff format --check order/services.py
