@@ -1,13 +1,47 @@
-from django.urls import path
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 
-from . import views
+from .views import (
+    CartItemViewSet,
+    CartView,
+    CheckoutView,
+    CouponValidateView,
+    HealthView,
+    LoyaltyAdjustmentView,
+    LoyaltyTransactionList,
+    OrderViewSet,
+    QuoteView,
+    RefundViewSet,
+    ReportsView,
+    ReturnViewSet,
+    ShippingMethodList,
+    StaffCouponViewSet,
+    StaffPaymentViewSet,
+    StaffShippingMethodViewSet,
+    StaffShippingZoneViewSet,
+    WalletView,
+)
+
+router = DefaultRouter()
+router.register("cart/items", CartItemViewSet, basename="cart-item")
+router.register("orders/returns", ReturnViewSet, basename="return")
+router.register("orders", OrderViewSet, basename="order")
+router.register("admin/payments", StaffPaymentViewSet, basename="admin-payment")
+router.register("admin/refunds", RefundViewSet, basename="admin-refund")
+router.register("admin/coupons", StaffCouponViewSet, basename="admin-coupon")
+router.register("admin/shipping/zones", StaffShippingZoneViewSet, basename="admin-shipping-zone")
+router.register("admin/shipping/methods", StaffShippingMethodViewSet, basename="admin-shipping-method")
 
 urlpatterns = [
-    path('cart/', views.cart_detail, name='cart'),
-    path('cart/items/<int:item_id>/', views.cart_item_detail, name='cart_item'),
-    path('orders/new/',views.new_order,name='new_order'),
-    path('orders/',views.get_orders,name='get_orders'),
-    path('order/<int:id>/',views.get_order,name='get_order'),
-    path('order/<int:id>/process/',views.process_order,name='process_order'),
-    path('order/<int:id>/delete/',views.delete_order,name='delete_order'),
+    path("health/", HealthView.as_view()),
+    path("cart/", CartView.as_view()),
+    path("shipping/methods/", ShippingMethodList.as_view()),
+    path("checkout/preview/", QuoteView.as_view()),
+    path("checkout/", CheckoutView.as_view()),
+    path("coupons/validate/", CouponValidateView.as_view()),
+    path("loyalty/wallet/", WalletView.as_view()),
+    path("loyalty/transactions/", LoyaltyTransactionList.as_view()),
+    path("admin/loyalty/adjustments/", LoyaltyAdjustmentView.as_view()),
+    path("admin/reports/summary/", ReportsView.as_view()),
+    path("", include(router.urls)),
 ]

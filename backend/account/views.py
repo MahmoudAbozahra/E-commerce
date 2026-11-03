@@ -1,102 +1,158 @@
+import hashlib
+import secrets
 from datetime import timedelta
 
-from django.contrib.auth.models import User
-from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.db import transaction
-from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.utils.crypto import get_random_string
 from drf_spectacular.utils import extend_schema
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes, throttle_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework import generics, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Profile
-from .serializers import PasswordResetConfirmSerializer, PasswordResetRequestSerializer, ProfileUpdateSerializer, SignUpSerializer, UserSerializer
+from .models import Address, AuditLog, Notification, Profile
+from .serializers import (
+    AddressSerializer,
+    AuditLogSerializer,
+    ChangePasswordSerializer,
+    NotificationSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
+    RegisterSerializer,
+    UserSerializer,
+)
 
-
-class SensitiveEndpointThrottle(AnonRateThrottle):
-    scope = 'auth'
-
-# Create your views here.
-
-@extend_schema(request=SignUpSerializer, responses={201: UserSerializer})
-@api_view(['POST'])
-@permission_classes([AllowAny])
-@throttle_classes([SensitiveEndpointThrottle])
-def register(request):
-    serializer = SignUpSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    user = serializer.save()
-    return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
-
-@extend_schema(responses={200: UserSerializer})
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def current_user(request):
-    user = UserSerializer(request.user)
-    return Response(user.data)
+User = get_user_model()
 
 
-@extend_schema(request=ProfileUpdateSerializer, responses={200: UserSerializer})
-@api_view(['PUT'])
-@permission_classes([IsAuthenticated])
-def update_user(request):
-    serializer = ProfileUpdateSerializer(request.user, data=request.data, partial=True)
-    serializer.is_valid(raise_exception=True)
-    serializer.save()
-    return Response(UserSerializer(request.user).data)
+class AuthThrottle(AnonRateThrottle):
+    scope = "auth"
 
 
+class RegisterView(generics.CreateAPIView):
+    serializer_class = RegisterSerializer
+    permission_classes = (AllowAny,)
+    throttle_classes = (AuthThrottle,)
 
-def get_curent_host(request):
-    protocol = 'https' if request.is_secure() else 'http'
-    return f"{protocol}://{request.get_host()}/"
+
+class MeView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_object(self):
+        return self.request.user
 
 
-@extend_schema(request=PasswordResetRequestSerializer, responses={200: None})
-@api_view(['POST'])
-@permission_classes([AllowAny])
-@throttle_classes([SensitiveEndpointThrottle])
-def forget_password(request):
-    request_serializer = PasswordResetRequestSerializer(data=request.data)
-    request_serializer.is_valid(raise_exception=True)
-    email = request_serializer.validated_data['email']
-    for user in User.objects.filter(email__iexact=email, is_active=True):
-        token = get_random_string(40)
-        user.profile.reset_password_token = token
-        user.profile.reset_password_expire = timezone.now() + timedelta(minutes=30)
-        user.profile.save(update_fields=['reset_password_token', 'reset_password_expire'])
-        link = f"{get_curent_host(request)}api/reset_password/{token}"
-        send_mail('Password reset', f'Use this link to reset your password: {link}', None, [user.email], fail_silently=True)
-    return Response({'details': 'If an account exists for that email, reset instructions have been sent.'})
-    
-    
-    
-@extend_schema(request=PasswordResetConfirmSerializer, responses={200: None})
-@api_view(['POST'])
-@permission_classes([AllowAny])
-@throttle_classes([SensitiveEndpointThrottle])
-def reset_password(request,token):
-    request_serializer = PasswordResetConfirmSerializer(data=request.data)
-    request_serializer.is_valid(raise_exception=True)
-    data = request_serializer.validated_data
-    with transaction.atomic():
-        profile = get_object_or_404(Profile.objects.select_for_update().select_related('user'), reset_password_token=token)
-        user = profile.user
-        if not profile.reset_password_expire or profile.reset_password_expire < timezone.now():
-            return Response({'error':'Token is expired'},status=status.HTTP_400_BAD_REQUEST)
-        try:
-            validate_password(data.get('password'), user)
-        except ValidationError as exc:
-            return Response({'password': list(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
-        user.set_password(data['password'])
-        profile.reset_password_token = ""
+class ChangePasswordView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(request=ChangePasswordSerializer, responses={204: None})
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        request.user.set_password(serializer.validated_data["new_password"])
+        request.user.save(update_fields=("password",))
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class LogoutView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(
+        request={"application/json": {"type": "object", "properties": {"refresh": {"type": "string"}}, "required": ["refresh"]}}, responses={204: None}
+    )
+    def post(self, request):
+        token = request.data.get("refresh")
+        if not token:
+            return Response({"refresh": ["This field is required."]}, status=400)
+        RefreshToken(token).blacklist()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PasswordResetRequestView(APIView):
+    permission_classes = (AllowAny,)
+    throttle_classes = (AuthThrottle,)
+
+    @extend_schema(request=PasswordResetRequestSerializer, responses={200: None})
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = User.objects.filter(email__iexact=serializer.validated_data["email"], is_active=True).first()
+        if user:
+            token = secrets.token_urlsafe(32)
+            profile, _ = Profile.objects.get_or_create(user=user)
+            profile.reset_token_digest = hashlib.sha256(token.encode()).hexdigest()
+            profile.reset_password_expire = timezone.now() + timedelta(minutes=30)
+            profile.save(update_fields=("reset_token_digest", "reset_password_expire"))
+            send_mail("Password reset", f"Use this one-time token within 30 minutes: {token}", None, [user.email], fail_silently=True)
+        return Response({"detail": "If an account exists, reset instructions have been sent."})
+
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = (AllowAny,)
+    throttle_classes = (AuthThrottle,)
+
+    @extend_schema(request=PasswordResetConfirmSerializer, responses={204: None})
+    @transaction.atomic
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        digest = hashlib.sha256(serializer.validated_data["token"].encode()).hexdigest()
+        profile = Profile.objects.select_for_update().filter(reset_token_digest=digest, reset_password_expire__gt=timezone.now()).select_related("user").first()
+        if not profile:
+            return Response({"token": ["Invalid or expired token."]}, status=400)
+        profile.user.set_password(serializer.validated_data["password"])
+        profile.user.save(update_fields=("password",))
+        profile.reset_token_digest = ""
         profile.reset_password_expire = None
-        profile.save(update_fields=['reset_password_token', 'reset_password_expire'])
-        user.save(update_fields=['password'])
-    return Response({'details':'password rest done'})
+        profile.save(update_fields=("reset_token_digest", "reset_password_expire"))
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AddressViewSet(viewsets.ModelViewSet):
+    serializer_class = AddressSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Address.objects.none()
+        return Address.objects.filter(user=self.request.user)
+
+    def perform_destroy(self, instance):
+        was_default = instance.is_default
+        user = instance.user
+        instance.delete()
+        if was_default:
+            replacement = user.addresses.order_by("id").first()
+            if replacement:
+                replacement.is_default = True
+                replacement.save(update_fields=("is_default",))
+
+
+class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = NotificationSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Notification.objects.none()
+        return Notification.objects.filter(user=self.request.user)
+
+    @action(detail=True, methods=("post",))
+    def read(self, request, pk=None):
+        notification = self.get_object()
+        if not notification.read_at:
+            notification.read_at = timezone.now()
+            notification.save(update_fields=("read_at",))
+        return Response(self.get_serializer(notification).data)
+
+
+class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = (IsAdminUser,)
+    serializer_class = AuditLogSerializer
+    queryset = AuditLog.objects.select_related("actor")

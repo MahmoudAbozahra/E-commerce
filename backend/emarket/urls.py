@@ -14,17 +14,20 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.permissions import AllowAny
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.views import TokenRefreshView, TokenViewBase
+from rest_framework_simplejwt.views import TokenViewBase
 
 
 class LoginThrottle(AnonRateThrottle):
-    scope = 'auth'
+    scope = "auth"
 
 
 class LoginView(TokenViewBase):
@@ -32,19 +35,19 @@ class LoginView(TokenViewBase):
     throttle_classes = [LoginThrottle]
     serializer_class = TokenObtainPairSerializer
 
+
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('api/',include('product.urls')),
-    path('api/',include('account.urls')),
-    path('api/token/',LoginView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/',TokenRefreshView.as_view(permission_classes=[AllowAny]), name='token_refresh'),
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path('api/',include('order.urls')),
-    
+    path("admin/", admin.site.urls),
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path("api/v1/", include("account.urls")),
+    path("api/v1/", include("product.urls")),
+    path("api/v1/", include("order.urls")),
 ]
 
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 
-handler404='utils.error_view.handler404'
-handler500='utils.error_view.handler500'
+handler404 = "utils.error_view.handler404"
+handler500 = "utils.error_view.handler500"

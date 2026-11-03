@@ -7,16 +7,20 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     services:
-      mysql:
-        image: mysql:8.4
+      postgres:
+        image: postgres:17-alpine
         env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: ecommerce
+          POSTGRES_DB: ecommerce
+          POSTGRES_USER: ecommerce
+          POSTGRES_PASSWORD: ecommerce
         ports:
-          - 3306:3306
+          - 5432:5432
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-cmd="pg_isready -U ecommerce -d ecommerce"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
@@ -24,23 +28,30 @@ jobs:
       DJANGO_SETTINGS_MODULE: emarket.settings
       DJANGO_SECRET_KEY: ci-only-test-secret-that-is-not-used-outside-github-actions
       DJANGO_DEBUG: 'true'
-      DB_ENGINE: django.db.backends.mysql
+      DB_ENGINE: django.db.backends.postgresql
       DB_NAME: ecommerce
-      DB_USER: root
-      DB_PASSWORD: root
+      DB_USER: ecommerce
+      DB_PASSWORD: ecommerce
       DB_HOST: 127.0.0.1
-      DB_PORT: '3306'
+      DB_PORT: '5432'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: pip
-      - run: python -m pip install -r requirements-dev.txt -r requirements-mysql.txt
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+      - run: python -m pip install -r requirements-dev.txt
       - run: python manage.py check
       - run: python manage.py makemigrations --check --dry-run
-      - run: python -c "import django; django.setup(); from django.db import connection; connection.ensure_connection(); assert connection.vendor == 'mysql'; cursor = connection.cursor(); cursor.execute('SELECT VERSION()'); version = cursor.fetchone()[0]; assert version.startswith('8.4.'), version; print('Connected to MySQL 8.4')"
+      - run: python -c "import django; django.setup(); from django.db import connection; connection.ensure_connection(); assert connection.vendor == 'postgresql'; print('Connected to PostgreSQL')"
+      - run: python manage.py migrate --noinput
+      - run: python manage.py seed_demo_store
+      - run: python manage.py seed_demo_store
       - run: python -m pytest -vv
-      - run: ruff check . --select F821
-      - run: ruff check account/models.py account/serializers.py account/tests.py account/urls.py account/views.py emarket/settings.py emarket/urls.py order/models.py order/serializers.py order/services.py order/tests.py order/urls.py order/views.py product/filters.py product/models.py product/serializers.py product/tests.py product/urls.py product/views.py
-      - run: ruff format --check order/services.py
+      - run: coverage run -m pytest && coverage report -m
+      - run: ruff check account emarket order product
+      - run: ruff format --check account emarket order product
+      - run: python manage.py spectacular --file schema.yml --validate
