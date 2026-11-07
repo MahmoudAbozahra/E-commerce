@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 980" role="img" aria-labelledby="title">
+  <title id="title">Ink studio hoodie demo illustration</title>
+  <defs><linearGradient id="fabric" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#323b44"/><stop offset="1" stop-color="#11171d"/></linearGradient></defs>
+  <path d="M400 112c0-44 63-45 63-5 0 27-36 31-52 55" fill="none" stroke="#272a2d" stroke-width="14" stroke-linecap="round"/>
+  <path d="M240 207 75 337l83 155 91-58-17 431h336l-17-431 91 58 83-155-165-130-91-42H331z" fill="url(#fabric)" stroke="#0c1115" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M331 165c-25 14-48 45-55 84 32 31 74 46 124 46s92-15 124-46c-7-39-30-70-55-84-19 29-42 43-69 43s-50-14-69-43Z" fill="#242e37" stroke="#0c1115" stroke-width="7"/>
+  <path d="M314 242 290 354M486 242l24 112" stroke="#c4cbd0" stroke-width="6" stroke-linecap="round"/>
+  <path d="M286 549h228l-24 112H310Z" fill="#1a2229" stroke="#0c1115" stroke-width="6"/><path d="M254 806h292" stroke="#45515b" stroke-width="8"/>
+  <rect x="452" y="342" width="73" height="25" rx="12" fill="#dce3e6" opacity=".9"/>
+</svg>

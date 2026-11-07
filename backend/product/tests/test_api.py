@@ -2,12 +2,14 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import IntegrityError, connection, transaction
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from rest_framework.exceptions import ValidationError as APIValidationError
 from rest_framework.test import APIClient
 
-from product.models import Brand, Category, InventoryMovement, Product, ProductVariant, WishlistItem
+from product.models import Brand, Category, InventoryMovement, Product, ProductImage, ProductVariant, WishlistItem
 from product.services import adjust_inventory
 
 User = get_user_model()
@@ -31,6 +33,32 @@ class CatalogTests(TestCase):
         client.force_authenticate(customer)
         self.assertEqual(client.post("/api/v1/admin/catalog/products/", {}, format="json").status_code, 403)
 
+    def test_catalog_exposes_primary_image_and_active_variants_without_n_plus_one(self):
+        image = ProductImage.objects.create(
+            product=self.product,
+            image=SimpleUploadedFile("cairo-phone.svg", b'<svg xmlns="http://www.w3.org/2000/svg"/>', content_type="image/svg+xml"),
+            alt_text="Cairo Phone front view",
+            is_primary=True,
+        )
+        self.addCleanup(lambda: image.image.delete(save=False))
+        client = APIClient()
+        with CaptureQueriesContext(connection) as one_product_queries:
+            response = client.get("/api/v1/catalog/products/")
+        self.assertEqual(response.status_code, 200)
+        item = response.data["results"][0]
+        self.assertEqual(item["primary_image"]["alt_text"], "Cairo Phone front view")
+        self.assertIn("cairo-phone", item["primary_image"]["url"])
+        self.assertEqual(item["variants"][0]["sku"], self.variant.sku)
+
+        second = Product.objects.create(
+            name="Second Phone", slug="second-phone", description="Phone", category=self.category, brand=self.brand, status=Product.Status.ACTIVE
+        )
+        ProductVariant.objects.create(product=second, sku="PHONE-SECOND", option_values={}, price=Decimal("100.00"), stock=1)
+        with CaptureQueriesContext(connection) as two_product_queries:
+            response = client.get("/api/v1/catalog/products/")
+        self.assertEqual(response.data["count"], 2)
+        self.assertEqual(len(two_product_queries), len(one_product_queries))
+
     def test_duplicate_variant_option_combination_is_rejected_by_database(self):
         with self.assertRaises(IntegrityError), transaction.atomic():
             ProductVariant.objects.create(product=self.product, sku="PHONE-BLK-2", option_values={"color": "black"}, price=Decimal("1"))
@@ -40,6 +68,16 @@ class CatalogTests(TestCase):
         self.category.parent = child
         with self.assertRaises(ValidationError):
             self.category.full_clean()
+
+    def test_parent_category_filter_includes_children_and_supports_bounded_page_size(self):
+        fashion = Category.objects.create(name="Fashion", slug="fashion")
+        hoodies = Category.objects.create(name="Hoodies", slug="hoodies", parent=fashion)
+        self.product.category = hoodies
+        self.product.save(update_fields=("category",))
+        response = APIClient().get("/api/v1/catalog/products/?category=fashion&page_size=100")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["slug"], self.product.slug)
 
     def test_negative_variant_price_is_rejected_by_database(self):
         with self.assertRaises(IntegrityError), transaction.atomic():

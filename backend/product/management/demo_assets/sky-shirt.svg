@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 980" role="img" aria-labelledby="title">
+  <title id="title">Sky stripe shirt demo illustration</title>
+  <defs><linearGradient id="fabric" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e8f1ef"/><stop offset="1" stop-color="#a9c9cd"/></linearGradient><pattern id="stripe" width="42" height="42" patternUnits="userSpaceOnUse"><path d="M7 0v42" stroke="#5a9caa" stroke-opacity=".58" stroke-width="10"/></pattern></defs>
+  <path d="M400 112c0-44 63-45 63-5 0 27-36 31-52 55" fill="none" stroke="#2b3030" stroke-width="14" stroke-linecap="round"/>
+  <path d="m304 176-85 37L67 348l90 144 87-59-18 411c116 44 232 44 348 0l-18-411 87 59 90-144-152-135-85-37Z" fill="url(#fabric)" stroke="#6f9da3" stroke-width="7" stroke-linejoin="round"/>
+  <path d="m304 176 96 105 96-105-34-24H338Z" fill="#f3f6f4" stroke="#6f9da3" stroke-width="7"/>
+  <path d="M228 247h344v591c-115 40-229 40-344 0Z" fill="url(#stripe)"/>
+  <path d="M400 281v575" stroke="#f6f8f6" stroke-width="8"/><g fill="#547f85"><circle cx="400" cy="347" r="7"/><circle cx="400" cy="433" r="7"/><circle cx="400" cy="519" r="7"/><circle cx="400" cy="605" r="7"/></g>
+  <path d="M264 384h103v112H264z" fill="#dcebea" fill-opacity=".72" stroke="#6f9da3" stroke-width="5"/>
+</svg>

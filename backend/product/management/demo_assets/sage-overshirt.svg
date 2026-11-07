@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 980" role="img" aria-labelledby="title">
+  <title id="title">Sage utility overshirt demo illustration</title>
+  <defs><linearGradient id="fabric" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#91a48d"/><stop offset="1" stop-color="#566b58"/></linearGradient></defs>
+  <path d="M400 112c0-44 63-45 63-5 0 27-36 31-52 55" fill="none" stroke="#302f2b" stroke-width="14" stroke-linecap="round"/>
+  <path d="m302 176-83 37L65 349l92 143 85-58-16 432h348l-16-432 85 58 92-143-154-136-83-37Z" fill="url(#fabric)" stroke="#485b4c" stroke-width="7" stroke-linejoin="round"/>
+  <path d="m302 176 98 104 98-104-31-24H333Z" fill="#c4cdbf" stroke="#485b4c" stroke-width="7"/>
+  <path d="M400 280v586" stroke="#dce2d9" stroke-width="7"/>
+  <path d="M270 386h105v124H270zM425 386h105v124H425z" fill="#6d826e" stroke="#485b4c" stroke-width="6"/>
+  <path d="M283 408h79M438 408h79" stroke="#c4cdbf" stroke-width="5"/><g fill="#e7ece4"><circle cx="400" cy="337" r="7"/><circle cx="400" cy="425" r="7"/><circle cx="400" cy="513" r="7"/><circle cx="400" cy="601" r="7"/></g>
+</svg>

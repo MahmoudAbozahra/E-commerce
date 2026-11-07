@@ -25,11 +25,43 @@ class BrandSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "created_at")
 
 
+class ProductPrimaryImageSerializer(serializers.Serializer):
+    url = serializers.URLField()
+    alt_text = serializers.CharField(allow_blank=True)
+
+
 class VariantSerializer(serializers.ModelSerializer):
+    product_id = serializers.IntegerField(source="product.id", read_only=True)
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    product_slug = serializers.CharField(source="product.slug", read_only=True)
+    product_primary_image = serializers.SerializerMethodField()
+
     class Meta:
         model = ProductVariant
-        fields = ("id", "sku", "option_values", "price", "stock", "low_stock_threshold", "is_active")
+        fields = (
+            "id",
+            "sku",
+            "option_values",
+            "price",
+            "stock",
+            "low_stock_threshold",
+            "is_active",
+            "product_id",
+            "product_name",
+            "product_slug",
+            "product_primary_image",
+        )
         read_only_fields = ("id", "stock")
+
+    @extend_schema_field(ProductPrimaryImageSerializer(allow_null=True))
+    def get_product_primary_image(self, obj):
+        images = list(getattr(obj.product, "catalog_images", ()))
+        image = next((item for item in images if item.is_primary), images[0] if images else None)
+        if image is None:
+            return None
+        request = self.context.get("request")
+        url = image.image.url
+        return {"url": request.build_absolute_uri(url) if request else url, "alt_text": image.alt_text}
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
@@ -45,14 +77,42 @@ class ProductListSerializer(serializers.ModelSerializer):
     available = serializers.BooleanField(read_only=True)
     rating_average = serializers.DecimalField(max_digits=3, decimal_places=2, read_only=True)
     review_count = serializers.IntegerField(read_only=True)
+    primary_image = serializers.SerializerMethodField()
+    variants = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
-        fields = ("id", "name", "slug", "brand", "category", "featured", "min_price", "available", "rating_average", "review_count")
+        fields = (
+            "id",
+            "name",
+            "slug",
+            "brand",
+            "category",
+            "featured",
+            "min_price",
+            "available",
+            "rating_average",
+            "review_count",
+            "primary_image",
+            "variants",
+        )
+
+    @extend_schema_field(ProductPrimaryImageSerializer(allow_null=True))
+    def get_primary_image(self, obj):
+        images = list(getattr(obj, "catalog_images", ()))
+        image = next((item for item in images if item.is_primary), images[0] if images else None)
+        if image is None:
+            return None
+        request = self.context.get("request")
+        url = image.image.url
+        return {"url": request.build_absolute_uri(url) if request else url, "alt_text": image.alt_text}
+
+    @extend_schema_field(VariantSerializer(many=True))
+    def get_variants(self, obj):
+        return VariantSerializer(getattr(obj, "catalog_variants", ()), many=True).data
 
 
 class ProductDetailSerializer(ProductListSerializer):
-    variants = VariantSerializer(many=True, read_only=True)
     images = ProductImageSerializer(many=True, read_only=True)
 
     class Meta(ProductListSerializer.Meta):

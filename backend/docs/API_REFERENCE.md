@@ -18,7 +18,7 @@ Base path: `/api/v1/`. JWT bearer authentication is required unless marked publi
 | GET | `/admin/audit-logs/` | Staff | Sensitive-operation audit trail |
 | GET | `/catalog/categories/` | Public | Active categories |
 | GET | `/catalog/brands/` | Public | Active brands |
-| GET | `/catalog/products/` | Public | Product list/search/filter/order |
+| GET | `/catalog/products/` | Public | Product list/search/filter/order; includes `primary_image` and active `variants` for storefront rendering |
 | GET | `/catalog/products/{slug}/` | Public | Product detail with variants/images |
 | CRUD | `/wishlist/` | Customer | Unique owned wishlist items |
 | GET/DELETE | `/cart/` | Customer | Retrieve/clear cart |

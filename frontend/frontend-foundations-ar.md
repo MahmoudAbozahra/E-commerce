@@ -1,3 +1,5 @@
+> **ملاحظة تاريخية:** الملف ده بيوثّق مسار التعلّم القديم المبني على Vite. الـ runtime canonical حاليًا هو تطبيق Next.js App Router الموثّق في `README.md`.
+
 # Frontend Foundations — مرجع جلسة 01
 
 > **المشروع التعليمي:** E-commerce Frontend متصل بـ Django REST API  

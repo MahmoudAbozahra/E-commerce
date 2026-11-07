@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Prefetch
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, mixins, viewsets
 from rest_framework.decorators import action
@@ -7,7 +8,7 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from product.models import ProductVariant
+from product.models import ProductImage, ProductVariant
 
 from .models import Cart, CartItem, Coupon, LoyaltyTransaction, LoyaltyWallet, Order, Payment, Refund, ReturnRequest, ShippingMethod, ShippingZone
 from .selectors import commerce_report_summary, order_list_for_user
@@ -50,7 +51,10 @@ class CartView(APIView):
 
     def get_cart(self, user):
         cart, _ = Cart.objects.get_or_create(user=user)
-        return Cart.objects.prefetch_related("items__variant__product").get(pk=cart.pk)
+        return Cart.objects.prefetch_related(
+            "items__variant__product",
+            Prefetch("items__variant__product__images", queryset=ProductImage.objects.order_by("sort_order", "id"), to_attr="catalog_images"),
+        ).get(pk=cart.pk)
 
     @extend_schema(responses=CartSerializer)
     def get(self, request):
@@ -72,7 +76,11 @@ class CartItemViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return CartItem.objects.none()
-        return CartItem.objects.filter(cart__user=self.request.user).select_related("variant__product")
+        return (
+            CartItem.objects.filter(cart__user=self.request.user)
+            .select_related("variant__product")
+            .prefetch_related(Prefetch("variant__product__images", queryset=ProductImage.objects.order_by("sort_order", "id"), to_attr="catalog_images"))
+        )
 
     @transaction.atomic
     def perform_create(self, serializer):
@@ -90,7 +98,7 @@ class CartItemViewSet(viewsets.ModelViewSet):
 class ShippingMethodList(generics.ListAPIView):
     permission_classes = (AllowAny,)
     serializer_class = ShippingMethodSerializer
-    queryset = ShippingMethod.objects.filter(is_active=True, zone__is_active=True).select_related("zone")
+    queryset = ShippingMethod.objects.filter(is_active=True, zone__is_active=True).select_related("zone").order_by("name", "id")
 
 
 class StaffShippingZoneViewSet(viewsets.ModelViewSet):

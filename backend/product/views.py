@@ -1,6 +1,7 @@
-from django.db.models import Avg, Count, Exists, Min, OuterRef, Q
+from django.db.models import Avg, Count, Exists, Min, OuterRef, Prefetch, Q
 from rest_framework import filters, viewsets
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
@@ -24,6 +25,12 @@ from .serializers import (
 from .services import adjust_inventory
 
 
+class CatalogPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
 class CatalogProductViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (AllowAny,)
     lookup_field = "slug"
@@ -31,9 +38,17 @@ class CatalogProductViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ("name", "description", "variants__sku")
     ordering_fields = ("created_at", "name", "min_price")
     ordering = ("-created_at",)
+    pagination_class = CatalogPagination
 
     def get_queryset(self):
-        qs = Product.objects.filter(status=Product.Status.ACTIVE).select_related("brand", "category").prefetch_related("variants", "images")
+        qs = (
+            Product.objects.filter(status=Product.Status.ACTIVE)
+            .select_related("brand", "category")
+            .prefetch_related(
+                Prefetch("variants", queryset=ProductVariant.objects.filter(is_active=True).order_by("id"), to_attr="catalog_variants"),
+                Prefetch("images", queryset=ProductImage.objects.order_by("sort_order", "id"), to_attr="catalog_images"),
+            )
+        )
         qs = qs.annotate(
             min_price=Min("variants__price", filter=Q(variants__is_active=True)),
             available=Exists(ProductVariant.objects.filter(product=OuterRef("pk"), is_active=True, stock__gt=0)),
@@ -42,7 +57,7 @@ class CatalogProductViewSet(viewsets.ReadOnlyModelViewSet):
         )
         params = self.request.query_params
         if params.get("category"):
-            qs = qs.filter(category__slug=params["category"])
+            qs = qs.filter(Q(category__slug=params["category"]) | Q(category__parent__slug=params["category"]))
         if params.get("brand"):
             qs = qs.filter(brand__slug=params["brand"])
         if params.get("min_price"):
@@ -66,7 +81,7 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
 class BrandViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (AllowAny,)
     serializer_class = BrandSerializer
-    queryset = Brand.objects.filter(is_active=True)
+    queryset = Brand.objects.filter(is_active=True).order_by("name", "id")
 
 
 class StaffCategoryViewSet(viewsets.ModelViewSet):

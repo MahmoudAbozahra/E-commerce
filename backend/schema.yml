@@ -2127,6 +2127,12 @@ paths:
         description: A page number within the paginated result set.
         schema:
           type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
       - name: search
         required: false
         in: query
@@ -4913,13 +4919,18 @@ components:
         review_count:
           type: integer
           readOnly: true
-        description:
-          type: string
+        primary_image:
+          allOf:
+          - $ref: '#/components/schemas/ProductPrimaryImage'
+          nullable: true
+          readOnly: true
         variants:
           type: array
           items:
             $ref: '#/components/schemas/Variant'
           readOnly: true
+        description:
+          type: string
         images:
           type: array
           items:
@@ -4943,6 +4954,7 @@ components:
       - images
       - min_price
       - name
+      - primary_image
       - rating_average
       - review_count
       - slug
@@ -5012,6 +5024,16 @@ components:
         review_count:
           type: integer
           readOnly: true
+        primary_image:
+          allOf:
+          - $ref: '#/components/schemas/ProductPrimaryImage'
+          nullable: true
+          readOnly: true
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/Variant'
+          readOnly: true
       required:
       - available
       - brand
@@ -5019,9 +5041,22 @@ components:
       - id
       - min_price
       - name
+      - primary_image
       - rating_average
       - review_count
       - slug
+      - variants
+    ProductPrimaryImage:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+        alt_text:
+          type: string
+      required:
+      - alt_text
+      - url
     ProductWrite:
       type: object
       properties:
@@ -5415,9 +5450,27 @@ components:
           format: int64
         is_active:
           type: boolean
+        product_id:
+          type: integer
+          readOnly: true
+        product_name:
+          type: string
+          readOnly: true
+        product_slug:
+          type: string
+          readOnly: true
+        product_primary_image:
+          allOf:
+          - $ref: '#/components/schemas/ProductPrimaryImage'
+          nullable: true
+          readOnly: true
       required:
       - id
       - price
+      - product_id
+      - product_name
+      - product_primary_image
+      - product_slug
       - sku
       - stock
     VariantWrite:

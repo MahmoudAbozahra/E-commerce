@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 980" role="img" aria-labelledby="title">
+  <title id="title">Sand knit pullover demo illustration</title>
+  <defs><linearGradient id="fabric" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#dfcba8"/><stop offset="1" stop-color="#b59a70"/></linearGradient><pattern id="rib" width="16" height="16" patternUnits="userSpaceOnUse"><path d="M0 0v16" stroke="#8f7653" stroke-opacity=".2" stroke-width="3"/></pattern></defs>
+  <path d="M400 112c0-44 63-45 63-5 0 27-36 31-52 55" fill="none" stroke="#332e28" stroke-width="14" stroke-linecap="round"/>
+  <path d="m307 177-91 35L64 350l94 144 87-62-18 433h346l-18-433 87 62 94-144-152-138-91-35Z" fill="url(#fabric)" stroke="#967b55" stroke-width="7" stroke-linejoin="round"/>
+  <path d="m307 177 93 57 93-57c-8 62-37 94-93 94s-85-32-93-94Z" fill="#efe1c7" stroke="#967b55" stroke-width="7"/>
+  <path d="M240 806h320v59H240z" fill="#aa8d63"/><path d="M230 280h340v526H230z" fill="url(#rib)" opacity=".75"/>
+  <path d="M270 365h260M270 430h260M270 495h260M270 560h260M270 625h260" stroke="#8f7653" stroke-width="3" opacity=".18"/>
+</svg>
